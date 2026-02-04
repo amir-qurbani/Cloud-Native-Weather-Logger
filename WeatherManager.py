@@ -1,5 +1,6 @@
 import requests
 import os
+import sqlite3
 from dotenv import load_dotenv
 
 
@@ -8,28 +9,56 @@ class WeatherManager:
     def __init__(self, api_key):
         self.api_key = api_key
 
-    def hämta_väder(self, stad):
+    def get_weather(self, city):
         try:
-            url = f"https://api.openweathermap.org/data/2.5/weather?q={stad}&appid={self.api_key}&units=metric"
+            url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={self.api_key}&units=metric"
 
-            svar = requests.get(url)
-            data = svar.json()
+            response = requests.get(url)
+            data = response.json()
+
+            # Check if the API request was successful (200 = OK)
+            if data.get("cod") != 200:
+                print(f"Error: Could not find city '{city}'")
+                return None
+
             return data
         except Exception as e:
-            print(f"Hoppsan, något gick fel: {e}")
+            print(f"Oops, something went wrong: {e}")
+            return None
 
-    def presentera_väder(self, data):
-        stad = data["name"]
+    def display_weather(self, data):
+        if data:
+            city_name = data["name"]
+            temp = data["main"]["temp"]
+            description = data["weather"][0]["description"]
+
+            print(f"In {city_name} it is {temp} degrees and {description}.")
+
+    def save_to_db(self, data):
+        connection = sqlite3.connect("my_database.db")
+        cursor = connection.cursor()
+
+        cursor.execute("CREATE TABLE IF NOT EXISTS weather_logs("
+                       "id INTEGER PRIMARY KEY, city TEXT, temperature REAL, description TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)")
+
+        city = data["name"]
         temp = data["main"]["temp"]
-        beskrivning = data["weather"][0]["description"]
+        desc = data["weather"][0]["description"]
+        cursor.execute(
+            "INSERT INTO weather_logs (city, temperature, description) VALUES (?,?,?)", (city, temp, desc))
 
-        print(f"I {stad} är det {temp} grader och {beskrivning}")
+        connection.commit()
+        connection.close()
 
 
+# Load environment variables
 load_dotenv()
-hemlig_nycket = os.getenv("API_KEY")
+secret_key = os.getenv("API_KEY")
 
-min_väder_app = WeatherManager(hemlig_nycket)
-resultat = min_väder_app.hämta_väder("Paris")
-min_väder_app.presentera_väder(resultat)
-print(resultat)
+# Start the application
+weather_app = WeatherManager(secret_key)
+result = weather_app.get_weather("Paris")
+
+# Display the result
+weather_app.display_weather(result)
+weather_app.save_to_db(result)
