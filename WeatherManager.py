@@ -50,6 +50,29 @@ class WeatherManager:
         connection.commit()
         connection.close()
 
+    def show_history(self):
+        try:
+            connection = sqlite3.connect("my_database.db")
+            cursor = connection.cursor()
+
+            cursor.execute(
+                "SELECT * FROM weather_logs ORDER BY timestamp DESC")
+            rows = cursor.fetchall()
+
+            if not rows:
+                print("No history found.")
+            else:
+                print("\n--- WEATHER SEARCH HISTORY ---")
+                print(
+                    f"{'DATE & TIME':<20} | {'CITY':<15} | {'TEMP':<7} | {'CONDITION'}")
+                print("-" * 65)
+
+                for id, city, temp, desc, time in rows:
+                    print(f"{time:<20} | {city:<15} | {temp:<7}°C | {desc}")
+            connection.close()
+        except Exception as e:
+            print(f" Erorr reading from database {e}")
+
 
 # Load environment variables
 load_dotenv()
