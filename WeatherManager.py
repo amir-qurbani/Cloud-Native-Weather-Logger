@@ -56,7 +56,7 @@ class WeatherManager:
             cursor = connection.cursor()
 
             cursor.execute(
-                "SELECT * FROM weather_logs ORDER BY timestamp DESC")
+                "SELECT * FROM weather_logs ORDER BY timestamp DESC LIMIT 5")
             rows = cursor.fetchall()
 
             if not rows:
@@ -72,6 +72,19 @@ class WeatherManager:
             connection.close()
         except Exception as e:
             print(f" Erorr reading from database {e}")
+
+    def delete_history(self):
+        try:
+            connection = sqlite3.connect("my_database.db")
+            cursor = connection.cursor()
+
+            cursor.execute("DELETE FROM weather_logs")
+
+            connection.commit()
+            connection.close()
+            print("\n--- History has been cleard succesfully ---")
+        except Exception as e:
+            print(f"Error deleting history: {e}")
 
 
 # Load environment variables

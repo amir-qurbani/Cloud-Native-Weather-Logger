@@ -15,7 +15,8 @@ def main():
         print("\n--- WELCOME TO WEATHER LOGGER ---")
         print("1. Check city weather")
         print("2. View history")
-        print("3. Exit")
+        print("3. Delete history")
+        print("4. Exit")
 
         choice = input("\nSelect an option (1-3): ")
 
@@ -35,8 +36,15 @@ def main():
             case "2":
                 print("\n--- SEARCH HISTORY ---")
                 weather_app.show_history()
-
             case "3":
+                confirm = input(
+                    "Are you sure you want to delete all history? (y/n)")
+                if confirm == "y":
+                    weather_app.delete_history()
+                else:
+                    print("Action cancelled")
+
+            case "4":
                 print("Thank you for using Weather Logger. Goodbye!")
                 break  # This stops the loop and exits the app
 
