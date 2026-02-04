@@ -40,6 +40,8 @@ class WeatherManager:
 
         cursor.execute("CREATE TABLE IF NOT EXISTS weather_logs("
                        "id INTEGER PRIMARY KEY, city TEXT, temperature REAL, description TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)")
+        cursor.execute(
+            "CREATE TABLE IF NOT EXISTS setting (name TEXT PRIMARY KEY, value TEXT)")
 
         city = data["name"]
         temp = data["main"]["temp"]
@@ -86,15 +88,25 @@ class WeatherManager:
         except Exception as e:
             print(f"Error deleting history: {e}")
 
+    def set_defult_city(self, city):
+        connection = sqlite3.connect("my_database.db")
+        cursor = connection.cursor()
 
-# Load environment variables
-load_dotenv()
-secret_key = os.getenv("API_KEY")
+        # Här är fixen: city ligger NU inuti samma parentes som "default_city"
+        cursor.execute(
+            "REPLACE INTO setting (name, value) VALUES (?,?)", ("default_city", city)
+        )
 
-# Start the application
-weather_app = WeatherManager(secret_key)
-result = weather_app.get_weather("Paris")
+        connection.commit()
+        connection.close()
+        print(f"Default city set to {city}")
 
-# Display the result
-weather_app.display_weather(result)
-weather_app.save_to_db(result)
+    def get_defult_city(self):
+        connection = sqlite3.connect("my_database.db")
+        cursor = connection.cursor()
+        cursor.execute(
+            "SELECT value FROM setting WHERE name = 'default_city'")
+        row = cursor.fetchone()
+        connection.close()
+
+        return row[0] if row else None
