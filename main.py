@@ -61,7 +61,7 @@ def main():
                 break  # This stops the loop and exits the app
 
             case _:
-                print("Invalid choice, please try again (1, 2 or 3).")
+                print("Invalid choice, please try again (1-5).")
 
 
 if __name__ == "__main__":
