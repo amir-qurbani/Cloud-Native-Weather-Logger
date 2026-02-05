@@ -1,13 +1,16 @@
 import requests
 import os
-import sqlite3
+import pyodbc
 from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class WeatherManager:
 
     def __init__(self, api_key):
         self.api_key = api_key
+        self.conn_str = os.getenv("AZURE_CONNECTION_STRING")
 
     def get_weather(self, city):
         try:
@@ -35,30 +38,36 @@ class WeatherManager:
             print(f"In {city_name} it is {temp} degrees and {description}.")
 
     def save_to_db(self, data):
-        connection = sqlite3.connect("my_database.db")
+        """ connection = sqlite3.connect("my_database.db")
         cursor = connection.cursor()
 
-        cursor.execute("CREATE TABLE IF NOT EXISTS weather_logs("
+        cursor.execute("CREATE TABLE IF NOT EXISTS WeatherData("
                        "id INTEGER PRIMARY KEY, city TEXT, temperature REAL, description TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)")
         cursor.execute(
-            "CREATE TABLE IF NOT EXISTS setting (name TEXT PRIMARY KEY, value TEXT)")
+            "CREATE TABLE IF NOT EXISTS setting (name TEXT PRIMARY KEY, value TEXT)") """
+        try:
+            city = data["name"]
+            temp = data["main"]["temp"]
+            desc = data["weather"][0]["description"]
 
-        city = data["name"]
-        temp = data["main"]["temp"]
-        desc = data["weather"][0]["description"]
-        cursor.execute(
-            "INSERT INTO weather_logs (city, temperature, description) VALUES (?,?,?)", (city, temp, desc))
+            conn = pyodbc.connect(self.conn_str)
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO WeatherData (city, temperature, description) VALUES (?,?,?)", (city, temp, desc))
 
-        connection.commit()
-        connection.close()
+            conn.commit()
+            conn.close()
+            print(f"✅ Sparat i Azure: {city}")
+        except Exception as e:
+            print(f"❌ Fel vid sparande till Azure: {e}")
 
     def show_history(self):
         try:
-            connection = sqlite3.connect("my_database.db")
-            cursor = connection.cursor()
+            conn = pyodbc.connect(self.conn_str)
+            cursor = conn.cursor()
 
             cursor.execute(
-                "SELECT * FROM weather_logs ORDER BY timestamp DESC LIMIT 5")
+                "SELECT TOP 5 Timestamp, City, Temperature, Description FROM WeatherData ORDER BY Timestamp DESC")
             rows = cursor.fetchall()
 
             if not rows:
@@ -69,44 +78,55 @@ class WeatherManager:
                     f"{'DATE & TIME':<20} | {'CITY':<15} | {'TEMP':<7} | {'CONDITION'}")
                 print("-" * 65)
 
-                for id, city, temp, desc, time in rows:
-                    print(f"{time:<20} | {city:<15} | {temp:<7}°C | {desc}")
-            connection.close()
+                for time, city, temp, desc in rows:
+                    clean_time = time.strftime('%Y-%m-%d %H:%M')
+                    print(f"{clean_time:<18} | {city:<12} | {temp:>5}°C | {desc}")
+            conn.close()
         except Exception as e:
             print(f" Erorr reading from database {e}")
 
     def delete_history(self):
         try:
-            connection = sqlite3.connect("my_database.db")
-            cursor = connection.cursor()
+            conn = pyodbc.connect(self.conn_str)
+            cursor = conn.cursor()
 
-            cursor.execute("DELETE FROM weather_logs")
+            cursor.execute("DELETE FROM WeatherData")
 
-            connection.commit()
-            connection.close()
+            conn.commit()
+            conn.close()
             print("\n--- History has been cleard succesfully ---")
         except Exception as e:
             print(f"Error deleting history: {e}")
 
     def set_defult_city(self, city):
-        connection = sqlite3.connect("my_database.db")
-        cursor = connection.cursor()
+        try:
+            conn = pyodbc.connect(self.conn_str)
+            cursor = conn.cursor()
 
-        # Här är fixen: city ligger NU inuti samma parentes som "default_city"
-        cursor.execute(
-            "REPLACE INTO setting (name, value) VALUES (?,?)", ("default_city", city)
-        )
+            # 1. Ta bort om den redan finns
+            cursor.execute("DELETE FROM setting WHERE name = 'default_city'")
 
-        connection.commit()
-        connection.close()
-        print(f"Default city set to {city}")
+            # 2. Lägg till den nya staden
+            cursor.execute(
+                "INSERT INTO setting (name, value) VALUES (?,?)",
+                ("default_city", city)
+            )
+
+            conn.commit()
+            conn.close()
+            print(f"✅ Default city set to {city} in Azure")
+        except Exception as e:
+            print(f"❌ Fel vid inställning: {e}")
 
     def get_defult_city(self):
-        connection = sqlite3.connect("my_database.db")
-        cursor = connection.cursor()
-        cursor.execute(
-            "SELECT value FROM setting WHERE name = 'default_city'")
-        row = cursor.fetchone()
-        connection.close()
-
-        return row[0] if row else None
+        try:
+            conn = pyodbc.connect(self.conn_str)
+            cursor = conn.cursor()  # Se till att det står conn.cursor() här!
+            cursor.execute(
+                "SELECT value FROM setting WHERE name = 'default_city'")
+            row = cursor.fetchone()
+            conn.close()
+            return row[0] if row else None
+        except Exception as e:
+            print(f"Error fetching default city: {e}")
+            return None

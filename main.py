@@ -27,7 +27,7 @@ def main():
         print("4. Change the defult city")
         print("5. Exit")
 
-        choice = input("\nSelect an option (1-3): ")
+        choice = input("\nSelect an option (1-5): ")
 
         match choice:
             case "1":
