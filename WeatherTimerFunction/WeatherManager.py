@@ -91,22 +91,40 @@ class WeatherManager:
             print(f"In {city_name} it is {temp} degrees and {description}.")
 
     def show_history(self):
+        # 1. Försök med Azure först
         try:
-            conn = pyodbc.connect(self.conn_str)
+            conn = pyodbc.connect(self.conn_str, timeout=3)
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT TOP 5 Timestamp, City, Temperature, Description FROM WeatherData ORDER BY Timestamp DESC")
+                "SELECT TOP 10 Timestamp, City, Temperature, Description FROM WeatherData ORDER BY Timestamp DESC")
             rows = cursor.fetchall()
-            if not rows:
-                print("No history found.")
-            else:
-                print("\n--- WEATHER SEARCH HISTORY ---")
-                print(
-                    f"{'DATE & TIME':<20} | {'CITY':<15} | {'TEMP':<7} | {'CONDITION'}")
-                print("-" * 65)
-                for time, city, temp, desc in rows:
-                    clean_time = time.strftime('%Y-%m-%d %H:%M')
-                    print(f"{clean_time:<18} | {city:<12} | {temp:>5}°C | {desc}")
+            print("\n--- CLOUD HISTORY (AZURE) ---")
+            self._print_history_rows(rows)
+            conn.close()
+            return
+        except Exception:
+            print("\n Azure ej tillgänglig. Hämtar lokal historik...")
+
+        # 2. Backup: Hämta från SQLite (local_weather.db)
+        try:
+            conn = sqlite3.connect('local_weather.db')
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT Timestamp, City, Temperature, Description FROM WeatherData ORDER BY Timestamp DESC LIMIT 10")
+            rows = cursor.fetchall()
+            print("\n--- LOCAL BACKUP HISTORY (SQLite) ---")
+            self._print_history_rows(rows)
             conn.close()
         except Exception as e:
-            print(f" Error reading from database {e}")
+            print(f"Kunde inte hämta historik: {e}")
+
+    def _print_history_rows(self, rows):
+        if not rows:
+            print("Ingen historik hittades.")
+            return
+        print(f"{'TID':<20} | {'STAD':<15} | {'TEMP':<7} | {'VÄDER'}")
+        print("-" * 65)
+        for row in rows:
+            # Hantera formatet för både Azure och SQLite
+            time_val = str(row[0])[:16]
+            print(f"{time_val:<20} | {row[1]:<15} | {row[2]:>5}°C | {row[3]}")
