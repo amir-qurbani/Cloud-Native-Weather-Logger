@@ -1,5 +1,7 @@
+.env
+local.settings.json
 .venv/
 __pycache__/
-*.db
+.vscode/
 __azurite_db_*
-local.settings.json
+*.db
