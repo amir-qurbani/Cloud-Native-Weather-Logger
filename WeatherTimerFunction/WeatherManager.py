@@ -1,6 +1,9 @@
 import requests
 import os
 import pyodbc
+from datetime import datetime
+import logging
+import sqlite3  # För lokala backup
 
 # Vi har tagit bort dotenv här eftersom Azure sköter det åt oss!
 
@@ -26,7 +29,6 @@ class WeatherManager:
             print(f"Oops, something went wrong: {e}")
             return None
 
-    # Steg 2: Döp om från save_to_db till save_to_azure (så det matchar function_app.py)
     def save_to_azure(self, data):
         try:
             city = data["name"]
@@ -46,8 +48,41 @@ class WeatherManager:
             print(f" Sparat i Azure: {city}")
         except Exception as e:
             print(f" Fel vid sparande till Azure: {e}")
+            self.save_locally(data)
 
-    # --- Resten av dina funktioner kan vara kvar som de är ---
+    def save_locally(self, data):
+        try:
+            conn = sqlite3.connect('local_weather.db')
+            cursor = conn.cursor()
+
+            # 1. Skapa tabellen först
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS WeatherData (
+                    City TEXT, 
+                    Temperature REAL, 
+                    Description TEXT, 
+                    Timestamp TEXT
+                )
+            ''')
+
+            # 2. Hämta värden från API-svaret (OpenWeather-format)
+            city = data.get("name")
+            temp = data.get("main", {}).get("temp")
+            desc = data.get("weather", [{}])[0].get("description")
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            # 3. Spara
+            cursor.execute(
+                "INSERT INTO WeatherData (City, Temperature, Description, Timestamp) VALUES (?, ?, ?, ?)",
+                (city, temp, desc, timestamp)
+            )
+
+            conn.commit()
+            conn.close()
+            print("✅ Data sparad lokalt i local_weather.db!")
+        except Exception as le:
+            print(f"❌ Kunde inte spara lokalt: {le}")
+
     def display_weather(self, data):
         if data:
             city_name = data["name"]
