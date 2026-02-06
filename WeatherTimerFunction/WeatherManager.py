@@ -5,8 +5,6 @@ from datetime import datetime
 import logging
 import sqlite3  # För lokala backup
 
-# Vi har tagit bort dotenv här eftersom Azure sköter det åt oss!
-
 
 class WeatherManager:
 
@@ -79,9 +77,9 @@ class WeatherManager:
 
             conn.commit()
             conn.close()
-            print("✅ Data sparad lokalt i local_weather.db!")
+            print(" Data sparad lokalt i local_weather.db!")
         except Exception as le:
-            print(f"❌ Kunde inte spara lokalt: {le}")
+            print(f" Kunde inte spara lokalt: {le}")
 
     def display_weather(self, data):
         if data:
@@ -125,6 +123,6 @@ class WeatherManager:
         print(f"{'TID':<20} | {'STAD':<15} | {'TEMP':<7} | {'VÄDER'}")
         print("-" * 65)
         for row in rows:
-            # Hantera formatet för både Azure och SQLite
+
             time_val = str(row[0])[:16]
             print(f"{time_val:<20} | {row[1]:<15} | {row[2]:>5}°C | {row[3]}")
