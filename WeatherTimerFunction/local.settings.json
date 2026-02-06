@@ -1,0 +1,9 @@
+{
+    "IsEncrypted": false,
+    "Values": {
+        "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+        "FUNCTIONS_WORKER_RUNTIME": "python",
+        "OPENWEATHER_API_KEY": "31e754755030757b6c224b5db1fed96c",
+        "AZURE_CONNECTION_STRING": "Driver={ODBC Driver 18 for SQL Server};Server=tcp:weather-db-v2-amir.database.windows.net,1433;Database=weather-db-v2;Uid=clouduser;Pwd=Maryam420?;Encrypt=yes;TrustServerCertificate=yes;"
+    }
+}
