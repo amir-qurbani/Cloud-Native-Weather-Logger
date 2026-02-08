@@ -3,12 +3,12 @@ import os
 import pyodbc
 from datetime import datetime
 import logging
-import sqlite3  # För lokala backup
+import sqlite3  # For local backup
 
 
 class WeatherManager:
 
-    # Steg 1: Uppdatera så den tar emot både nyckel och databas-länk
+    # Step 1: Initialize with API key and database connection string
     def __init__(self, api_key, conn_str):
         self.api_key = api_key
         self.conn_str = conn_str
@@ -33,7 +33,6 @@ class WeatherManager:
             temp = data["main"]["temp"]
             desc = data["weather"][0]["description"]
 
-            # Här använder vi self.conn_str som vi fick när klassen startade
             conn = pyodbc.connect(self.conn_str)
             cursor = conn.cursor()
             cursor.execute(
@@ -43,9 +42,9 @@ class WeatherManager:
 
             conn.commit()
             conn.close()
-            print(f" Sparat i Azure: {city}")
+            print(f"Saved to Azure: {city}")
         except Exception as e:
-            print(f" Fel vid sparande till Azure: {e}")
+            print(f"Error saving to Azure: {e}")
             self.save_locally(data)
 
     def save_locally(self, data):
@@ -53,7 +52,6 @@ class WeatherManager:
             conn = sqlite3.connect('local_weather.db')
             cursor = conn.cursor()
 
-            # 1. Skapa tabellen först
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS WeatherData (
                     City TEXT, 
@@ -63,13 +61,11 @@ class WeatherManager:
                 )
             ''')
 
-            # 2. Hämta värden från API-svaret (OpenWeather-format)
             city = data.get("name")
             temp = data.get("main", {}).get("temp")
             desc = data.get("weather", [{}])[0].get("description")
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-            # 3. Spara
             cursor.execute(
                 "INSERT INTO WeatherData (City, Temperature, Description, Timestamp) VALUES (?, ?, ?, ?)",
                 (city, temp, desc, timestamp)
@@ -77,9 +73,9 @@ class WeatherManager:
 
             conn.commit()
             conn.close()
-            print(" Data sparad lokalt i local_weather.db!")
+            print("Data saved locally in local_weather.db!")
         except Exception as le:
-            print(f" Kunde inte spara lokalt: {le}")
+            print(f"Could not save locally: {le}")
 
     def display_weather(self, data):
         if data:
@@ -89,7 +85,7 @@ class WeatherManager:
             print(f"In {city_name} it is {temp} degrees and {description}.")
 
     def show_history(self):
-        # 1. Försök med Azure först
+        # 1. Try Azure first
         try:
             conn = pyodbc.connect(self.conn_str, timeout=3)
             cursor = conn.cursor()
@@ -101,9 +97,9 @@ class WeatherManager:
             conn.close()
             return
         except Exception:
-            print("\n Azure ej tillgänglig. Hämtar lokal historik...")
+            print("\nAzure not available. Loading local history...")
 
-        # 2. Backup: Hämta från SQLite (local_weather.db)
+        # 2. Backup: Fetch from SQLite
         try:
             conn = sqlite3.connect('local_weather.db')
             cursor = conn.cursor()
@@ -114,15 +110,14 @@ class WeatherManager:
             self._print_history_rows(rows)
             conn.close()
         except Exception as e:
-            print(f"Kunde inte hämta historik: {e}")
+            print(f"Could not fetch history: {e}")
 
     def _print_history_rows(self, rows):
         if not rows:
-            print("Ingen historik hittades.")
+            print("No history found.")
             return
-        print(f"{'TID':<20} | {'STAD':<15} | {'TEMP':<7} | {'VÄDER'}")
+        print(f"{'TIME':<20} | {'CITY':<15} | {'TEMP':<7} | {'WEATHER'}")
         print("-" * 65)
         for row in rows:
-
             time_val = str(row[0])[:16]
             print(f"{time_val:<20} | {row[1]:<15} | {row[2]:>5}°C | {row[3]}")

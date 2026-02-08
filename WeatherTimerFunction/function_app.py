@@ -21,4 +21,4 @@ def timer_trigger(myTimer: func.TimerRequest) -> None:
 
     if weather_data:
         weather_app.save_to_azure(weather_data)
-        logging.info("Vädret hämtades och sparades automatiskt!")
+        logging.info("The weather was saved automatically!")
